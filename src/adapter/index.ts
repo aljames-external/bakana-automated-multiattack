@@ -88,6 +88,14 @@ class Adapter {
         return this.foundry.deepClone(obj);
     }
 
+    async renderTemplate(path: string, data: Record<string, unknown> = {}): Promise<string> {
+        return this.foundry.renderTemplate(path, data);
+    }
+
+    async loadTemplates(paths: string[]): Promise<unknown> {
+        return this.foundry.loadTemplates(paths);
+    }
+
     randomID(length: number = 16): string {
         return this.foundry.randomID(length);
     }

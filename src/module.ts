@@ -7,10 +7,17 @@ import { executeMultiattack, registerMultiattackHooks, registerMultiattackChatHo
 import { abstractMultiattackDescription } from './multiattack/abstraction.js';
 import { parseMultiattackTemplate } from './multiattack/parser.js';
 
-Hooks.once('init', () => {
+Hooks.once('init', async () => {
     log.info(`Initializing ${MODULE_NAME} (${MODULE_ID})`);
     registerModuleSettings();
     adapter.init();
+
+    await adapter.loadTemplates([
+        `modules/${MODULE_ID}/templates/autorec-menu.html`,
+        `modules/${MODULE_ID}/templates/autorec-exchange.html`,
+        `modules/${MODULE_ID}/templates/automated-support.html`,
+        `modules/${MODULE_ID}/templates/select-option-dialog.html`
+    ]);
 });
 
 Hooks.once('ready', () => {

@@ -1,3 +1,4 @@
+import { MODULE_ID } from '../../constants.js';
 import { deepFreeze, localize } from '../../lib/utils.js';
 import type { SelectOptionItem } from '../../types/global.d.js';
 
@@ -38,6 +39,35 @@ export class BaseFoundryAdapter {
     get HandlebarsApplicationMixin(): any {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return (foundry as any)?.applications?.api?.HandlebarsApplicationMixin;
+    }
+
+    /**
+     * Renders a Handlebars template file.
+     * @param {string} path Path to HTML template file
+     * @param {Record<string, unknown>} [data={}] Data context for template rendering
+     * @returns {Promise<string>}
+     */
+    async renderTemplate(path: string, data: Record<string, unknown> = {}): Promise<string> {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if (typeof (globalThis as any).renderTemplate === 'function') {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            return (globalThis as any).renderTemplate(path, data);
+        }
+        return Promise.resolve('');
+    }
+
+    /**
+     * Preloads Handlebars template paths.
+     * @param {string[]} paths Array of template paths to preload
+     * @returns {Promise<unknown>}
+     */
+    async loadTemplates(paths: string[]): Promise<unknown> {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if (typeof (globalThis as any).loadTemplates === 'function') {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            return (globalThis as any).loadTemplates(paths);
+        }
+        return Promise.resolve();
     }
 
     /**
@@ -276,14 +306,10 @@ export class BaseFoundryAdapter {
             `;
         }).join('');
 
-        const content = `
-            <div class="bam-select-container">
-                ${subtitle ? `<div class="bam-select-header">${subtitle}</div>` : ''}
-                <div class="bam-option-list">
-                    ${optionsHtml}
-                </div>
-            </div>
-        `;
+        const content = await this.renderTemplate(
+            `modules/${MODULE_ID}/templates/select-option-dialog.html`,
+            { subtitle, optionsHtml }
+        );
 
         if (dialogCls?.wait) {
             return new Promise<string | null>((resolve) => {

@@ -753,25 +753,17 @@ export class AutorecMenuApplication extends BaseApp {
             `;
         }
 
-        container.innerHTML = `
-            <div class="bam-autorec-topbar">
-                <input type="text" class="bam-search-input" id="bam-search-input" placeholder="${localize('BAM.autorecMenu.searchPlaceholder', 'Filter templates or monsters...')}" value="${this._searchFilter}" />
-                <button type="button" id="bam-add-template-btn" class="bam-option-btn" title="Click or Drag & Drop an Actor here to create a new template" style="width: auto; padding: 5px 12px;">
-                    <i class="fas fa-plus"></i> ${localize('BAM.autorecMenu.addTemplateBtn', 'Add Template')}
-                </button>
-                <button type="button" id="bam-reset-defaults-btn" class="bam-option-btn bam-option-finish" style="width: auto; padding: 5px 12px;">
-                    <i class="fas fa-rotate-left"></i> ${localize('BAM.autorecMenu.resetDefaultsBtn', 'Reset Defaults')}
-                </button>
-            </div>
-            <div class="bam-autorec-body">
-                <div class="bam-autorec-sidebar">
-                    ${sidebarItemsHtml}
-                </div>
-                <div class="bam-autorec-inspector">
-                    ${inspectorHtml}
-                </div>
-            </div>
-        `;
+        container.innerHTML = await adapter.renderTemplate(
+            `modules/${MODULE_ID}/templates/autorec-menu.html`,
+            {
+                searchPlaceholder: localize('BAM.autorecMenu.searchPlaceholder', 'Filter templates or monsters...'),
+                searchFilter: this._searchFilter,
+                addTemplateLabel: localize('BAM.autorecMenu.addTemplateBtn', 'Add Template'),
+                resetDefaultsLabel: localize('BAM.autorecMenu.resetDefaultsBtn', 'Reset Defaults'),
+                sidebarItemsHtml,
+                inspectorHtml
+            }
+        );
 
         this._attachListeners(container, isUnfilled);
         return container;

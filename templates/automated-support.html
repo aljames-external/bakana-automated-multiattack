@@ -1,0 +1,59 @@
+<div class="bam-autorec-container" style="padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+    <div style="font-size: 0.85rem; color: #cbd5e1; background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); padding: 10px 12px; border-radius: 6px; line-height: 1.4;">
+        <i class="fas fa-robot" style="color: #818cf8; margin-right: 6px;"></i>
+        <b>Automated Support</b> enables optional AI assistance for parsing novel homebrew multiattack phrasings into reusable templates and interactively fixing complex sequence JSON in the Multiattack Manager.
+    </div>
+
+    <div style="display: flex; align-items: center; justify-content: space-between; background: #1e2436; padding: 10px 12px; border-radius: 6px; border: 1px solid #334155;">
+        <div>
+            <div style="font-weight: 600; color: #f8fafc; font-size: 0.9rem;">Enable Automated Support</div>
+            <div style="font-size: 0.78rem; color: #94a3b8;">Allow unknown multiattack phrasings to fall back to the configured LLM and enable the interactive JSON Repair Agent.</div>
+        </div>
+        <input type="checkbox" id="bam-llm-enable" {{#if enableLlmFallback}}checked{{/if}} style="width: 18px; height: 18px; cursor: pointer;" />
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 4px;">
+        <label style="font-size: 0.82rem; font-weight: 600; color: #e2e8f0;">LLM Provider</label>
+        <select id="bam-llm-provider" style="width: 100%; padding: 7px 10px; background: #1e2436; border: 1px solid #475569; color: #f8fafc; border-radius: 5px;">
+            <option value="openai" {{#if (eq llmProvider "openai")}}selected{{/if}}>OpenAI (GPT-4o / GPT-4o-mini)</option>
+            <option value="gemini" {{#if (eq llmProvider "gemini")}}selected{{/if}}>Google Gemini</option>
+            <option value="anthropic" {{#if (eq llmProvider "anthropic")}}selected{{/if}}>Anthropic Claude</option>
+            <option value="custom" {{#if (eq llmProvider "custom")}}selected{{/if}}>Custom OpenAI-Compatible Endpoint (Ollama / Local)</option>
+        </select>
+        <span style="font-size: 0.75rem; color: #94a3b8;">Select the LLM API provider for parsing novel multiattack phrasings.</span>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 4px;">
+        <label style="font-size: 0.82rem; font-weight: 600; color: #e2e8f0;">LLM API Key</label>
+        <div style="display: flex; gap: 6px;">
+            <input type="password" id="bam-llm-api-key" value="{{llmApiKey}}" placeholder="sk-... / AIza..." style="flex: 1; padding: 7px 10px; background: #1e2436; border: 1px solid #475569; color: #f8fafc; border-radius: 5px; font-family: monospace;" />
+            <button type="button" id="bam-toggle-key-btn" class="bam-chat-card-btn" style="width: 38px; padding: 0; display: flex; align-items: center; justify-content: center;" title="Show / Hide API Key">
+                <i class="fas fa-eye"></i>
+            </button>
+        </div>
+        <span style="font-size: 0.75rem; color: #94a3b8;">API key for the selected LLM provider. Leave blank if using local Ollama without auth.</span>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 4px;">
+        <label style="font-size: 0.82rem; font-weight: 600; color: #e2e8f0;">LLM Model Name</label>
+        <input type="text" id="bam-llm-model" value="{{llmModel}}" placeholder="gpt-4o-mini, gemini-2.5-flash, claude-3-5-haiku-latest" style="width: 100%; padding: 7px 10px; background: #1e2436; border: 1px solid #475569; color: #f8fafc; border-radius: 5px; font-family: monospace;" />
+        <span style="font-size: 0.75rem; color: #94a3b8;">Model identifier to request from the provider.</span>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 4px;">
+        <label style="font-size: 0.82rem; font-weight: 600; color: #e2e8f0;">Custom LLM Endpoint URL (Optional)</label>
+        <input type="text" id="bam-llm-endpoint" value="{{llmEndpoint}}" placeholder="http://localhost:11434/v1/chat/completions" style="width: 100%; padding: 7px 10px; background: #1e2436; border: 1px solid #475569; color: #f8fafc; border-radius: 5px; font-family: monospace;" />
+        <span style="font-size: 0.75rem; color: #94a3b8;">Optional custom endpoint URL for OpenAI-compatible servers or local proxies.</span>
+    </div>
+
+    <div id="bam-llm-test-status" style="display: none; font-size: 0.8rem; padding: 8px 10px; border-radius: 5px;"></div>
+
+    <div style="display: flex; gap: 10px; margin-top: 6px;">
+        <button type="button" id="bam-test-llm-btn" class="bam-chat-card-btn" style="flex: 1; background: #334155; border-color: #475569;">
+            <i class="fas fa-plug"></i> Test Connection
+        </button>
+        <button type="button" id="bam-save-llm-btn" class="bam-chat-card-btn" style="flex: 1;">
+            <i class="fas fa-save"></i> Save Automated Support
+        </button>
+    </div>
+</div>

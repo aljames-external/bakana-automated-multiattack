@@ -1,3 +1,5 @@
+import { MODULE_ID } from '../constants.js';
+import { adapter } from '../adapter/index.js';
 import { autorecManager } from './autorecManager.js';
 import { notify } from '../lib/logger.js';
 
@@ -32,17 +34,10 @@ export class AutorecExchangeMenuApplication extends BaseApp {
 
         const currentJson = JSON.stringify(autorecManager.getAllEntries(), null, 2);
 
-        container.innerHTML = `
-            <div style="font-size: 0.88rem; color: #cbd5e1;">
-                Copy the JSON below to export your central Multiattack Autorecognition database, or paste JSON below and click <b>Import JSON</b>.
-            </div>
-            <textarea id="bam-exchange-json" rows="12" style="width: 100%; padding: 8px; background: #1e2436; border: 1px solid #4f46e5; color: #a5b4fc; border-radius: 6px; font-family: monospace;">${currentJson}</textarea>
-            <div style="display: flex; gap: 10px;">
-                <button type="button" id="bam-import-json-btn" class="bam-chat-card-btn" style="flex: 1;">
-                    <i class="fas fa-file-import"></i> Import JSON
-                </button>
-            </div>
-        `;
+        container.innerHTML = await adapter.renderTemplate(
+            `modules/${MODULE_ID}/templates/autorec-exchange.html`,
+            { currentJson }
+        );
 
         const importBtn = container.querySelector('#bam-import-json-btn');
         importBtn?.addEventListener('click', async () => {

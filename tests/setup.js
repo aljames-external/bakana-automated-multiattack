@@ -170,6 +170,38 @@ globalThis.ChatMessage = {
     }
 };
 
+import fs from 'node:fs';
+import path from 'node:path';
+
+globalThis.loadTemplates = async (paths) => {
+    return Promise.resolve(paths);
+};
+
+globalThis.renderTemplate = async (templatePath, data = {}) => {
+    let cleanPath = templatePath;
+    if (cleanPath.startsWith('modules/bakana-automated-multiattack/')) {
+        cleanPath = cleanPath.replace('modules/bakana-automated-multiattack/', '');
+    }
+    const fullPath = path.resolve(process.cwd(), cleanPath);
+    if (!fs.existsSync(fullPath)) return '';
+    let html = fs.readFileSync(fullPath, 'utf8');
+
+    html = html.replace(/\{\{#if\s+\(eq\s+(\w+)\s+"([^"]+)"\)\}\}([\s\S]*?)\{\{\/if\}\}/g, (_match, varName, val, inner) => {
+        return String(data[varName]) === val ? inner : '';
+    });
+    html = html.replace(/\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{\/if\}\}/g, (_match, varName, inner) => {
+        return Boolean(data[varName]) ? inner : '';
+    });
+
+    for (const [k, v] of Object.entries(data)) {
+        if (v !== undefined && v !== null) {
+            html = html.replaceAll(`{{{${k}}}}`, String(v));
+            html = html.replaceAll(`{{${k}}}`, String(v));
+        }
+    }
+    return html;
+};
+
 if (!globalThis.window) {
     globalThis.window = globalThis;
 }
