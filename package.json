@@ -7,7 +7,7 @@
     "build": "vite build",
     "build:watch": "vite build --watch",
     "typecheck": "tsc --noEmit",
-    "test": "npm run build && tsx --test tests/*.test.js tests/adapter/*.test.js tests/autorec/*.test.js tests/multiattack/*.test.js tests/ui/*.test.js"
+    "test": "npm run build && tsx --test --test-force-exit tests/*.test.js tests/adapter/*.test.js tests/autorec/*.test.js tests/multiattack/*.test.js tests/ui/*.test.js"
   },
   "keywords": [
     "foundryvtt",

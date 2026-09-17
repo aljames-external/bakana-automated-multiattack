@@ -392,50 +392,35 @@ export class AutorecMenuApplication extends BaseApp {
             this._lastSelectedIdForWorking = null;
         }
 
-        const container = document.createElement('div');
-        container.className = 'bam-autorec-container';
+        const templateEntries = entries.filter((e: AutorecEntry) => e.type === 'template');
+        const overrideEntries = entries.filter((e: AutorecEntry) => e.type === 'override');
+        const llmEntries = entries.filter((e: AutorecEntry) => e.type === 'llm');
 
-        const templateEntries = entries.filter((e) => e.type === 'template');
-        const overrideEntries = entries.filter((e) => e.type === 'override');
-        const llmEntries = entries.filter((e) => e.type === 'llm');
-
-        const renderSidebarItem = (e: AutorecEntry): string => `
-            <div class="bam-sidebar-item ${e.id === selected?.id ? 'active' : ''}" data-entry-id="${e.id}">
-                <span>${e.name}</span>
-            </div>
-        `;
-
-        const templateSectionHtml = templateEntries.length > 0 ? `
-            <div class="bam-sidebar-section">
-                <div class="bam-sidebar-section-header" style="padding: 8px 10px 6px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #fbbf24; background: rgba(30, 36, 54, 0.85); border-bottom: 1px solid #334155; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 1;">
-                    <span><i class="fas fa-scroll" style="margin-right: 6px;"></i> Templates</span>
-                    <span style="background: #78350f; color: #fde68a; padding: 1px 6px; border-radius: 10px; font-size: 0.68rem;">${templateEntries.length}</span>
-                </div>
-                ${templateEntries.map(renderSidebarItem).join('')}
-            </div>
-        ` : '';
-
-        const overrideSectionHtml = overrideEntries.length > 0 ? `
-            <div class="bam-sidebar-section" style="margin-top: 6px;">
-                <div class="bam-sidebar-section-header" style="padding: 8px 10px 6px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #fbbf24; background: rgba(30, 36, 54, 0.85); border-top: 1px solid #334155; border-bottom: 1px solid #334155; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 1;">
-                    <span><i class="fas fa-dragon" style="margin-right: 6px;"></i> Monster Overrides</span>
-                    <span style="background: #78350f; color: #fde68a; padding: 1px 6px; border-radius: 10px; font-size: 0.68rem;">${overrideEntries.length}</span>
-                </div>
-                ${overrideEntries.map(renderSidebarItem).join('')}
-            </div>
-        ` : '';
-
-        const llmSectionHtml = llmEntries.length > 0 ? `
-            <div class="bam-sidebar-section" style="margin-top: 6px;">
-                <div class="bam-sidebar-section-header" style="padding: 8px 10px 6px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #fbbf24; background: rgba(30, 36, 54, 0.85); border-top: 1px solid #334155; border-bottom: 1px solid #334155; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 1;">
-                    <span><i class="fas fa-robot" style="margin-right: 6px;"></i> LLM Generated</span>
-                    <span style="background: #78350f; color: #fde68a; padding: 1px 6px; border-radius: 10px; font-size: 0.68rem;">${llmEntries.length}</span>
-                </div>
-                ${llmEntries.map(renderSidebarItem).join('')}
-            </div>
-        ` : '';
-
-        const sidebarItemsHtml = `${templateSectionHtml}${overrideSectionHtml}${llmSectionHtml}` || `<div style="padding: 16px 12px; font-size: 0.8rem; color: #64748b; font-style: italic; text-align: center;">No entries found.</div>`;
+        const sidebarSections = [];
+        if (templateEntries.length > 0) {
+            sidebarSections.push({
+                title: 'Templates',
+                icon: 'fas fa-scroll',
+                count: templateEntries.length,
+                entries: templateEntries.map((e: AutorecEntry) => ({ id: e.id, name: e.name, active: e.id === selected?.id }))
+            });
+        }
+        if (overrideEntries.length > 0) {
+            sidebarSections.push({
+                title: 'Monster Overrides',
+                icon: 'fas fa-dragon',
+                count: overrideEntries.length,
+                entries: overrideEntries.map((e) => ({ id: e.id, name: e.name, active: e.id === selected?.id }))
+            });
+        }
+        if (llmEntries.length > 0) {
+            sidebarSections.push({
+                title: 'LLM Generated',
+                icon: 'fas fa-robot',
+                count: llmEntries.length,
+                entries: llmEntries.map((e) => ({ id: e.id, name: e.name, active: e.id === selected?.id }))
+            });
+        }
 
         const displayName = this._pendingName ?? selected?.name ?? '';
         const displayPattern = this._pendingPattern ?? selected?.pattern ?? '';
@@ -453,305 +438,80 @@ export class AutorecMenuApplication extends BaseApp {
             };
         });
 
-        const stepsBuilderHtml = seq.map((section, sectionIdx) => {
+        const stepCards = seq.map((section, sectionIdx) => {
             const nonEmptyFlows = (Array.isArray(section) ? section : []).filter((f) => f.length > 0);
             const hasOptionalExit = (Array.isArray(section) ? section : []).some((f) => f.length === 0);
             const displayFlows = nonEmptyFlows.length > 0 ? nonEmptyFlows : [['<ITEM_0>']];
 
-            const branchesHtml = displayFlows.map((flow, flowIdx) => {
+            const branches = displayFlows.map((flow, flowIdx) => {
                 const groups = groupFlowTokens(flow);
-                const pillsHtml = groups.map((group, groupIdx) => {
+                const pills = groups.map((group, groupIdx) => {
                     const isStandard = activeChoices.some(
                         (c) => c.value.toLowerCase() === group.token.toLowerCase()
                     );
-                    const optionsHtml = activeChoices.map(
-                        (c) => `<option value="${c.value}" ${c.value.toLowerCase() === group.token.toLowerCase() ? 'selected' : ''}>${c.label}</option>`
-                    ).join('') + `<option value="__CUSTOM__" ${!isStandard ? 'selected' : ''}>Custom Weapon / Pool...</option>`;
+                    const options = activeChoices.map((c) => ({
+                        value: c.value,
+                        label: c.label,
+                        selected: c.value.toLowerCase() === group.token.toLowerCase()
+                    }));
 
-                    const customInputHtml = !isStandard
-                        ? `<input type="text" class="bam-pill-custom-input" data-sec="${sectionIdx}" data-flow="${flowIdx}" data-grp="${groupIdx}" value="${group.token}" placeholder="Item:Activity:Uses (e.g. Flail:Activity1:1)" style="width: 170px; padding: 1px 5px; background: #11141d; border: 1px solid #6366f1; color: #fff; border-radius: 3px; font-size: 0.78rem;" />`
-                        : '';
+                    return {
+                        secIdx: sectionIdx,
+                        flowIdx,
+                        grpIdx: groupIdx,
+                        hasConnector: groupIdx > 0,
+                        group,
+                        isStandard,
+                        options
+                    };
+                });
 
-                    const connectorHtml = groupIdx > 0
-                        ? (group.strictOrder
-                            ? `<span class="bam-then-connector" style="background: rgba(251, 191, 36, 0.2); border: 1px solid #fbbf24; color: #fbbf24; font-weight: 700; font-size: 0.7rem; padding: 1px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 3px;" title="Must be rolled AFTER preceding attacks in this branch"><i class="fas fa-arrow-right"></i> THEN</span>`
-                            : `<span style="color:#64748b; font-weight:700;">+</span>`)
-                        : '';
+                return {
+                    secIdx: sectionIdx,
+                    flowIdx,
+                    isAlternative: flowIdx > 0,
+                    canDeleteBranch: displayFlows.length > 1,
+                    pills
+                };
+            });
 
-                    return `
-                        ${connectorHtml}
-                        <div class="bam-attack-pill">
-                            <div class="bam-pill-stepper">
-                                <button type="button" class="bam-pill-btn bam-pill-dec" data-sec="${sectionIdx}" data-flow="${flowIdx}" data-grp="${groupIdx}" title="Decrease Count">&minus;</button>
-                                <span>${group.count}&times;</span>
-                                <button type="button" class="bam-pill-btn bam-pill-inc" data-sec="${sectionIdx}" data-flow="${flowIdx}" data-grp="${groupIdx}" title="Increase Count">+</button>
-                            </div>
-                            <select class="bam-pill-select" data-sec="${sectionIdx}" data-flow="${flowIdx}" data-grp="${groupIdx}">
-                                ${optionsHtml}
-                            </select>
-                            ${customInputHtml}
-                            <button type="button" class="bam-pill-btn bam-pill-order" data-sec="${sectionIdx}" data-flow="${flowIdx}" data-grp="${groupIdx}" title="Toggle Strict Order ('THEN') vs Any Order ('+')" style="color: ${group.strictOrder ? '#fbbf24' : '#94a3b8'};">
-                                <i class="fas ${group.strictOrder ? 'fa-lock' : 'fa-random'}"></i>
-                            </button>
-                            <button type="button" class="bam-pill-btn bam-pill-del" data-sec="${sectionIdx}" data-flow="${flowIdx}" data-grp="${groupIdx}" title="Remove Attack" style="color: #f87171;">
-                                &times;
-                            </button>
-                        </div>
-                    `;
-                }).join('');
+            return {
+                secIdx: sectionIdx,
+                stepTitle: sectionIdx === 0 ? 'Step 1 (Initial Attacks)' : `Then Step ${sectionIdx + 1} (After Step ${sectionIdx})`,
+                hasOptionalExit,
+                canDeleteStep: seq.length > 1,
+                branches
+            };
+        });
 
-                const orDivider = flowIdx > 0
-                    ? `<div class="bam-or-divider">&mdash; OR (Alternative Combo) &mdash;</div>`
-                    : '';
+        const droppedActorCard = this._droppedActor ? {
+            actorImg: this._droppedActor.actorImg,
+            actorName: this._droppedActor.actorName,
+            itemName: this._droppedActor.itemName,
+            rawDescription: this._droppedActor.rawDescription,
+            weaponMappings: Object.entries(this._droppedActor.itemMap).map(([k, v]) => ({
+                label: formatTokenHumanLabel(k),
+                target: v
+            })),
+            isTemplateMode: this._droppedActor.mode === 'template',
+            isOverrideMode: this._droppedActor.mode === 'override'
+        } : null;
 
-                return `
-                    ${orDivider}
-                    <div class="bam-branch-row">
-                        ${pillsHtml}
-                        <button type="button" class="bam-option-btn bam-add-pill-btn" data-sec="${sectionIdx}" data-flow="${flowIdx}" title="Add simultaneous/unordered attack to this branch (+)" style="width: auto; padding: 3px 8px; font-size: 0.75rem;">
-                            <i class="fas fa-plus"></i> Attack
-                        </button>
-                        <button type="button" class="bam-option-btn bam-add-then-pill-btn" data-sec="${sectionIdx}" data-flow="${flowIdx}" title="Add sequential 'THEN' attack inside this branch (rolled after previous attacks in this branch)" style="width: auto; padding: 3px 8px; font-size: 0.75rem; border-color: #fbbf24; color: #fde68a;">
-                            <i class="fas fa-arrow-right"></i> + Then
-                        </button>
-                        ${displayFlows.length > 1 ? `
-                            <button type="button" class="bam-pill-btn bam-del-branch-btn" data-sec="${sectionIdx}" data-flow="${flowIdx}" title="Remove this OR branch" style="margin-left: auto; color: #f87171;">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
-                        ` : ''}
-                    </div>
-                `;
-            }).join('');
+        const llmReviewBanner = selected?.type === 'llm' ? {
+            actorName: selected.llmMetadata?.actorName || 'Monster',
+            itemName: selected.llmMetadata?.itemName || 'Multiattack',
+            rawDescription: selected.llmMetadata?.rawDescription,
+            overrideKey: selected.llmMetadata?.overrideKey ?? 'this monster',
+            weaponMappings: selected.llmMetadata?.itemMap
+                ? Object.entries(selected.llmMetadata.itemMap).map(([k, v]) => ({
+                    label: formatTokenHumanLabel(k),
+                    target: v
+                }))
+                : []
+        } : null;
 
-            return `
-                <div class="bam-step-card">
-                    <div class="bam-step-header">
-                        <div class="bam-step-badge">
-                            <i class="fas fa-layer-group"></i>
-                            <span>${sectionIdx === 0 ? 'Step 1 (Initial Attacks)' : `Then Step ${sectionIdx + 1} (After Step ${sectionIdx})`}</span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <label style="font-size: 0.76rem; color: #cbd5e1; display: flex; align-items: center; gap: 5px; cursor: pointer;">
-                                <input type="checkbox" class="bam-step-optional-cb" data-sec="${sectionIdx}" ${hasOptionalExit ? 'checked' : ''} />
-                                Optional / Can Finish Early
-                            </label>
-                            ${seq.length > 1 ? `
-                                <button type="button" class="bam-pill-btn bam-del-step-btn" data-sec="${sectionIdx}" title="Delete Step" style="color: #f87171;">
-                                    <i class="fas fa-trash"></i> Remove Step
-                                </button>
-                            ` : ''}
-                        </div>
-                    </div>
-                    ${branchesHtml}
-                    <div>
-                        <button type="button" class="bam-option-btn bam-add-branch-btn" data-sec="${sectionIdx}" style="width: auto; padding: 4px 10px; font-size: 0.76rem;">
-                            <i class="fas fa-code-branch"></i> + Add "OR" Alternative Branch
-                        </button>
-                    </div>
-                </div>
-            `;
-        }).join('');
-
-        const droppedActorCardHtml = this._droppedActor ? `
-            <div class="bam-dropped-actor-card" id="bam-actor-dropzone">
-                <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <img src="${this._droppedActor.actorImg}" alt="${this._droppedActor.actorName}" style="width: 38px; height: 38px; border-radius: 6px; object-fit: cover; border: 1px solid #818cf8;" />
-                        <div>
-                            <div style="font-weight: 700; color: #fff; font-size: 0.88rem;">
-                                ${this._droppedActor.actorName} <span style="font-weight: 400; color: #94a3b8; font-size: 0.76rem;">(${this._droppedActor.itemName})</span>
-                            </div>
-                            <div style="font-size: 0.75rem; color: #cbd5e1; font-style: italic;">
-                                "${this._droppedActor.rawDescription}"
-                            </div>
-                        </div>
-                    </div>
-                    <button type="button" id="bam-clear-dropped-btn" class="bam-pill-btn" title="Clear dropped monster and reset to unfilled" style="font-size: 1rem; color: #94a3b8;">&times;</button>
-                </div>
-                <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding-top: 4px; border-top: 1px solid rgba(99, 102, 241, 0.25);">
-                    <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
-                        <span style="font-size: 0.74rem; color: #94a3b8;">Detected Weapons:</span>
-                        ${Object.entries(this._droppedActor.itemMap).map(([k, v]) => `
-                            <span class="bam-weapon-mapping-pill"><b style="color:#a5b4fc;">${formatTokenHumanLabel(k)}</b> &rarr; ${v}</span>
-                        `).join('')}
-                    </div>
-                    <div style="display: flex; gap: 6px;">
-                        <button type="button" id="bam-drop-mode-template" class="bam-option-btn" style="width: auto; padding: 3px 10px; font-size: 0.74rem; ${this._droppedActor.mode === 'template' ? 'border-color: #818cf8; background: rgba(99, 102, 241, 0.35); font-weight: 700;' : ''}">
-                            <i class="fas fa-shapes"></i> Reusable Template
-                        </button>
-                        <button type="button" id="bam-drop-mode-override" class="bam-option-btn" style="width: auto; padding: 3px 10px; font-size: 0.74rem; ${this._droppedActor.mode === 'override' ? 'border-color: #818cf8; background: rgba(99, 102, 241, 0.35); font-weight: 700;' : ''}">
-                            <i class="fas fa-user-tag"></i> Specific Monster Override
-                        </button>
-                    </div>
-                </div>
-            </div>
-        ` : '';
-
-        const llmReviewBannerHtml = selected?.type === 'llm' ? `
-            <div class="bam-llm-review-banner" style="background: rgba(99, 102, 241, 0.12); border: 1px solid #818cf8; border-radius: 8px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px;">
-                <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <div style="font-weight: 700; color: #e0e7ff; font-size: 0.9rem; display: flex; align-items: center; gap: 8px;">
-                        <i class="fas fa-robot" style="color: #818cf8;"></i>
-                        <span>LLM Generated Entry — Pending Approval</span>
-                    </div>
-                    <span style="background: rgba(251, 191, 36, 0.2); border: 1px solid #fbbf24; color: #fde68a; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 10px;">
-                        NEEDS REVIEW
-                    </span>
-                </div>
-                ${selected.llmMetadata?.rawDescription ? `
-                    <div style="font-size: 0.78rem; color: #cbd5e1; font-style: italic; background: rgba(15, 19, 30, 0.5); padding: 6px 8px; border-radius: 4px; border-left: 3px solid #818cf8;">
-                        <b>${selected.llmMetadata.actorName || 'Monster'} (${selected.llmMetadata.itemName || 'Multiattack'}):</b> "${selected.llmMetadata.rawDescription}"
-                    </div>
-                ` : ''}
-                ${selected.llmMetadata?.itemMap && Object.keys(selected.llmMetadata.itemMap).length > 0 ? `
-                    <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
-                        <span style="font-size: 0.74rem; color: #94a3b8;">Detected Weapons:</span>
-                        ${Object.entries(selected.llmMetadata.itemMap).map(([k, v]) => `
-                            <span class="bam-weapon-mapping-pill"><b style="color:#a5b4fc;">${formatTokenHumanLabel(k)}</b> &rarr; ${v}</span>
-                        `).join('')}
-                    </div>
-                ` : ''}
-                <div style="font-size: 0.78rem; color: #94a3b8;">
-                    Review or refine the sequence below, then approve it to move it into either <b>Templates</b> (reusable for any monster with this sentence structure) or <b>Monster Overrides</b> (specific to ${selected.llmMetadata?.overrideKey ?? 'this monster'}):
-                </div>
-                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <button type="button" id="bam-approve-template-btn" class="bam-chat-card-btn" style="flex: 1; background: #4f46e5; border-color: #6366f1;">
-                        <i class="fas fa-scroll"></i> Approve as Generic Template
-                    </button>
-                    <button type="button" id="bam-approve-override-btn" class="bam-chat-card-btn" style="flex: 1; background: #0f766e; border-color: #14b8a6;">
-                        <i class="fas fa-dragon"></i> Approve as Monster Override
-                    </button>
-                </div>
-            </div>
-        ` : '';
-
-        let inspectorHtml = '';
-        if (!selected) {
-            inspectorHtml = `<div style="color: #94a3b8;">No entries found. Click "+ Add Template" to create one.</div>`;
-        } else if (isUnfilled) {
-            inspectorHtml = `
-                <div style="display: flex; flex-direction: column; gap: 18px; padding: 12px 4px;">
-                    <div style="font-size: 0.92rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px;">
-                        <i class="fas fa-plus-circle" style="color: #818cf8;"></i> New Multiattack Template Setup
-                    </div>
-                    <div class="bam-actor-dropzone" id="bam-actor-dropzone" style="padding: 24px 18px; flex-direction: column; text-align: center; gap: 10px;">
-                        <i class="fas fa-dragon" style="font-size: 2.2rem; color: #818cf8;"></i>
-                        <div style="font-weight: 700; color: #e2e8f0; font-size: 0.95rem;">
-                            Option 1: Drag &amp; Drop a Monster Actor Here
-                        </div>
-                        <div style="font-size: 0.8rem; color: #94a3b8; max-width: 440px;">
-                            Drag any Actor from the Sidebar or Compendium into this box. We will automatically read its Multiattack feature, resolve 2024 enrichers, and configure the attack sequence for you.
-                        </div>
-                    </div>
-
-                    <div style="display: flex; align-items: center; gap: 12px; color: #64748b; font-size: 0.78rem; font-weight: 700; text-transform: uppercase;">
-                        <div style="flex: 1; height: 1px; background: rgba(99, 102, 241, 0.25);"></div>
-                        <span>OR</span>
-                        <div style="flex: 1; height: 1px; background: rgba(99, 102, 241, 0.25);"></div>
-                    </div>
-
-                    <div style="background: rgba(15, 19, 30, 0.65); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 8px; padding: 16px; display: flex; align-items: center; justify-content: space-between; gap: 14px;">
-                        <div>
-                            <div style="font-weight: 700; color: #e2e8f0; font-size: 0.88rem;">
-                                Option 2: Fill Manually
-                            </div>
-                            <div style="font-size: 0.76rem; color: #94a3b8;">
-                                Start with a blank template and configure the pattern and visual attack steps yourself.
-                            </div>
-                        </div>
-                        <button type="button" id="bam-start-manual-btn" class="bam-chat-card-btn" style="width: auto; padding: 8px 16px; white-space: nowrap;">
-                            <i class="fas fa-sliders"></i> Fill Manually
-                        </button>
-                    </div>
-
-                    <div style="display: flex; justify-content: flex-end; margin-top: 8px;">
-                        <button type="button" id="bam-delete-btn" class="bam-option-btn bam-option-finish" style="width: auto; padding: 6px 14px;">
-                            <i class="fas fa-trash"></i> Discard New Template
-                        </button>
-                    </div>
-                </div>
-            `;
-        } else {
-            inspectorHtml = `
-                <div style="display: flex; flex-direction: column; gap: 12px;">
-                    ${llmReviewBannerHtml}
-                    ${droppedActorCardHtml}
-
-                    <!-- Plain English Summary Banner -->
-                    <div class="bam-summary-banner">
-                        <div class="bam-summary-title">
-                            <i class="fas fa-magic"></i> Plain-English Attack Summary
-                        </div>
-                        <div class="bam-summary-body">
-                            ${summaryHtml}
-                        </div>
-                    </div>
-
-                    <div style="display: flex; flex-direction: column; gap: 10px;">
-                        <div style="display: flex; flex-direction: column; gap: 4px;">
-                            <label style="font-size: 0.78rem; color: #94a3b8;">Entry Name</label>
-                            <input type="text" id="bam-edit-name" value="${displayName}" style="width: 100%; padding: 6px 8px; background: #1e2436; border: 1px solid #4f46e5; color: #fff; border-radius: 4px;" />
-                        </div>
-                        <div style="display: flex; flex-direction: column; gap: 4px;">
-                            <div style="display: flex; align-items: center; justify-content: space-between;">
-                                <label style="font-size: 0.78rem; color: #94a3b8;">Pattern / Key (Abstracted sentence or Actor::Item override)</label>
-                                <button type="button" id="bam-parse-pattern-btn" class="bam-option-btn" title="Parse the sentence in Pattern / Key into the Visual Attack Sequence Builder below" style="width: auto; padding: 2px 8px; font-size: 0.72rem; border-color: #6366f1; color: #a5b4fc;">
-                                    <i class="fas fa-wand-magic-sparkles"></i> Auto-Build from Pattern Text
-                                </button>
-                            </div>
-                            <input type="text" id="bam-edit-pattern" value="${displayPattern}" style="width: 100%; padding: 6px 8px; background: #1e2436; border: 1px solid #4f46e5; color: #fff; border-radius: 4px; font-family: monospace;" />
-                        </div>
-                    </div>
-
-                    <!-- Visual Multiattack Flow Builder -->
-                    <div style="display: flex; flex-direction: column; gap: 8px;">
-                        <div style="display: flex; align-items: center; justify-content: space-between;">
-                            <label style="font-size: 0.8rem; font-weight: 600; color: #cbd5e1;">
-                                Visual Attack Sequence Builder
-                            </label>
-                            <button type="button" id="bam-add-step-btn" class="bam-option-btn" style="width: auto; padding: 3px 10px; font-size: 0.76rem;">
-                                <i class="fas fa-plus"></i> + Add "Then" Step
-                            </button>
-                        </div>
-                        ${stepsBuilderHtml}
-                    </div>
-
-                    ${Boolean(game.settings?.get(MODULE_ID, 'enableLlmFallback')) ? `
-                        <div class="bam-llm-repair-box" style="background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.35); border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; margin-top: 4px;">
-                            <div style="display: flex; align-items: center; justify-content: space-between;">
-                                <span style="font-size: 0.78rem; font-weight: 700; color: #a5b4fc; display: flex; align-items: center; gap: 6px;">
-                                    <i class="fas fa-robot"></i> Fix / Refine Sequence with LLM Agent
-                                </span>
-                                <span style="font-size: 0.7rem; color: #94a3b8;">Sends schema rules, current JSON, pattern &amp; your feedback</span>
-                            </div>
-                            <div style="display: flex; gap: 8px; align-items: center;">
-                                <input type="text" id="bam-llm-feedback-input" placeholder="Describe what's wrong (e.g. 'Longbow should only roll AFTER the 3 sword attacks, or roll 2 slings instead')" style="flex: 1; padding: 6px 8px; background: #11141d; border: 1px solid #4f46e5; color: #fff; border-radius: 4px; font-size: 0.78rem;" />
-                                <button type="button" id="bam-llm-repair-btn" class="bam-option-btn" style="width: auto; padding: 6px 12px; font-size: 0.76rem; background: rgba(99, 102, 241, 0.25); border-color: #818cf8; color: #fff; white-space: nowrap;">
-                                    <i class="fas fa-wand-magic-sparkles"></i> Ask LLM to Fix
-                                </button>
-                            </div>
-                        </div>
-                    ` : ''}
-
-                    <!-- Collapsible Raw JSON for power users -->
-                    <details style="margin-top: 4px;">
-                        <summary style="cursor: pointer; font-size: 0.76rem; color: #64748b;">
-                            Advanced: Raw 3D JSON Data
-                        </summary>
-                        <textarea id="bam-edit-sequence" rows="4" style="width: 100%; margin-top: 6px; padding: 6px; background: #11141d; border: 1px solid #334155; color: #94a3b8; border-radius: 4px; font-family: monospace; font-size: 0.78rem;">${JSON.stringify(seq, null, 2)}</textarea>
-                    </details>
-
-                    <div style="display: flex; gap: 10px; margin-top: 6px;">
-                        <button type="button" id="bam-save-btn" class="bam-chat-card-btn" style="flex: 1;">
-                            <i class="fas fa-save"></i> ${localize('BAM.autorecMenu.saveBtn', 'Save Changes')}
-                        </button>
-                        <button type="button" id="bam-delete-btn" class="bam-option-btn bam-option-finish" style="width: auto; padding: 6px 14px;">
-                            <i class="fas fa-trash"></i> ${localize('BAM.autorecMenu.deleteBtn', 'Delete')}
-                        </button>
-                    </div>
-                </div>
-            `;
-        }
+        const container = document.createElement('div');
+        container.className = 'bam-autorec-container';
 
         container.innerHTML = await adapter.renderTemplate(
             `modules/${MODULE_ID}/templates/autorec-menu.html`,
@@ -760,8 +520,19 @@ export class AutorecMenuApplication extends BaseApp {
                 searchFilter: this._searchFilter,
                 addTemplateLabel: localize('BAM.autorecMenu.addTemplateBtn', 'Add Template'),
                 resetDefaultsLabel: localize('BAM.autorecMenu.resetDefaultsBtn', 'Reset Defaults'),
-                sidebarItemsHtml,
-                inspectorHtml
+                saveBtnLabel: localize('BAM.autorecMenu.saveBtn', 'Save Changes'),
+                deleteBtnLabel: localize('BAM.autorecMenu.deleteBtn', 'Delete'),
+                sidebarSections,
+                hasSelected: Boolean(selected),
+                isUnfilled,
+                displayName,
+                displayPattern,
+                summaryHtml,
+                stepCards,
+                droppedActorCard,
+                llmReviewBanner,
+                enableLlmFallback: Boolean(game.settings?.get(MODULE_ID, 'enableLlmFallback')),
+                rawSequenceJson: JSON.stringify(seq, null, 2)
             }
         );
 

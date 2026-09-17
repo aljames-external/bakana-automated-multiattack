@@ -184,22 +184,171 @@ globalThis.renderTemplate = async (templatePath, data = {}) => {
     }
     const fullPath = path.resolve(process.cwd(), cleanPath);
     if (!fs.existsSync(fullPath)) return '';
-    let html = fs.readFileSync(fullPath, 'utf8');
+    let template = fs.readFileSync(fullPath, 'utf8');
 
-    html = html.replace(/\{\{#if\s+\(eq\s+(\w+)\s+"([^"]+)"\)\}\}([\s\S]*?)\{\{\/if\}\}/g, (_match, varName, val, inner) => {
-        return String(data[varName]) === val ? inner : '';
-    });
-    html = html.replace(/\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{\/if\}\}/g, (_match, varName, inner) => {
-        return Boolean(data[varName]) ? inner : '';
-    });
-
-    for (const [k, v] of Object.entries(data)) {
-        if (v !== undefined && v !== null) {
-            html = html.replaceAll(`{{{${k}}}}`, String(v));
-            html = html.replaceAll(`{{${k}}}`, String(v));
+    const getPathVal = (obj, pathStr) => {
+        if (obj === null || obj === undefined) return undefined;
+        let str = pathStr.trim();
+        if (str === 'this' || str === '.') return obj;
+        if (str.startsWith('this.')) str = str.slice(5);
+        if (str.startsWith('./')) str = str.slice(2);
+        const parts = str.split('.');
+        let curr = obj;
+        for (const p of parts) {
+            if (curr === null || curr === undefined) return undefined;
+            curr = curr[p];
         }
-    }
-    return html;
+        return curr;
+    };
+
+    const partials = new Map();
+    template = template.replace(/\{\{#\*inline\s+"([^"]+)"\}\}([\s\S]*?)\{\{\/inline\}\}/g, (_match, name, content) => {
+        partials.set(name, content);
+        return '';
+    });
+
+    const evaluate = (tmpl, ctx) => {
+        let res = '';
+        let i = 0;
+        const len = tmpl.length;
+
+        while (i < len) {
+            const blockStart = tmpl.indexOf('{{#', i);
+            if (blockStart === -1) {
+                res += tmpl.slice(i);
+                break;
+            }
+
+            res += tmpl.slice(i, blockStart);
+            i = blockStart;
+
+            const match = tmpl.slice(i).match(/^\{\{\#(if|unless|each)\s+([^}]+)\}\}/);
+            if (!match) {
+                const inlineMatch = tmpl.slice(i).match(/^\{\{\#\*inline\s+"([^"]+)"\}\}/);
+                if (inlineMatch) {
+                    const closeIdx = tmpl.indexOf('{{/inline}}', i);
+                    if (closeIdx !== -1) {
+                        i = closeIdx + 11;
+                        continue;
+                    }
+                }
+                res += tmpl[i];
+                i++;
+                continue;
+            }
+
+            const type = match[1];
+            const expr = match[2].trim();
+            const tagLength = match[0].length;
+            const contentStart = i + tagLength;
+
+            let depth = 1;
+            let pos = contentStart;
+            let elsePos = -1;
+
+            while (pos < len && depth > 0) {
+                const nextOpen = tmpl.indexOf('{{#', pos);
+                const nextClose = tmpl.indexOf(`{{/${type}}}`, pos);
+
+                let minPos = nextClose;
+                if (minPos === -1) break;
+
+                if (nextOpen !== -1 && nextOpen < minPos) {
+                    minPos = nextOpen;
+                }
+
+                if (depth === 1 && elsePos === -1) {
+                    const nextElse = tmpl.indexOf('{{else}}', pos);
+                    if (nextElse !== -1 && nextElse < minPos && (nextOpen === -1 || nextElse < nextOpen)) {
+                        elsePos = nextElse;
+                        pos = nextElse + 8;
+                        continue;
+                    }
+                }
+
+                if (minPos === nextOpen) {
+                    depth++;
+                    pos = nextOpen + 3;
+                } else {
+                    depth--;
+                    if (depth === 0) {
+                        const ifContent = elsePos !== -1 ? tmpl.slice(contentStart, elsePos) : tmpl.slice(contentStart, minPos);
+                        const elseContent = elsePos !== -1 ? tmpl.slice(elsePos + 8, minPos) : '';
+
+                        let cond = false;
+                        if (type === 'each') {
+                            const list = getPathVal(ctx, expr);
+                            if (Array.isArray(list) && list.length > 0) {
+                                res += list.map((item, idx) => {
+                                    const itemCtx = typeof item === 'object' && item !== null ? { ...item, '@first': idx === 0, '@index': idx } : { this: item, '@first': idx === 0, '@index': idx };
+                                    return evaluate(ifContent, itemCtx);
+                                }).join('');
+                            } else {
+                                res += evaluate(elseContent, ctx);
+                            }
+                        } else {
+                            if (type === 'if') {
+                                const eqMatch = expr.match(/\(eq\s+([^\s]+)\s+"([^"]+)"\)/);
+                                if (eqMatch) {
+                                    cond = String(getPathVal(ctx, eqMatch[1])) === eqMatch[2];
+                                } else if (expr.includes('.length')) {
+                                    const prop = expr.replace('.length', '').trim();
+                                    const list = getPathVal(ctx, prop);
+                                    cond = Array.isArray(list) ? list.length > 0 : Boolean(list);
+                                } else {
+                                    cond = Boolean(getPathVal(ctx, expr));
+                                }
+                            } else if (type === 'unless') {
+                                const val = getPathVal(ctx, expr);
+                                cond = expr.startsWith('@') ? false : !val;
+                            }
+                            res += cond ? evaluate(ifContent, ctx) : evaluate(elseContent, ctx);
+                        }
+
+                        i = minPos + type.length + 5;
+                        break;
+                    }
+                    pos = minPos + type.length + 5;
+                }
+            }
+        }
+
+        let prevRes = '';
+        while (prevRes !== res && res.includes('{{>')) {
+            prevRes = res;
+            res = res.replace(/\{\{>\s*(\w+)(?:\s+([^}]+))?\}\}/g, (_match, pName, argExpr) => {
+                const pTmpl = partials.get(pName);
+                if (!pTmpl) return '';
+                let pCtx = ctx;
+                if (argExpr) {
+                    const match = argExpr.match(/(\w+)=([\s\S]+)/);
+                    if (match) {
+                        const valKey = match[2].trim();
+                        pCtx = getPathVal(ctx, valKey) ?? ctx;
+                    } else {
+                        pCtx = getPathVal(ctx, argExpr.trim()) ?? ctx;
+                    }
+                }
+                return evaluate(pTmpl, pCtx);
+            });
+        }
+
+        res = res.replace(/\{\{\{\s*([^}]+)\s*\}\}\}/g, (_match, expr) => {
+            const val = getPathVal(ctx, expr.trim());
+            return val !== undefined && val !== null ? String(val) : '';
+        });
+
+        res = res.replace(/\{\{\s*([^}]+)\s*\}\}/g, (_match, expr) => {
+            const key = expr.trim();
+            if (key.startsWith('>')) return _match;
+            const val = getPathVal(ctx, key);
+            return val !== undefined && val !== null ? String(val) : '';
+        });
+
+        return res;
+    };
+
+    return evaluate(template, data);
 };
 
 if (!globalThis.window) {

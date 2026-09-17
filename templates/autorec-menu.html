@@ -1,3 +1,97 @@
+{{#*inline "sidebarItem"}}
+<div class="bam-sidebar-item {{#if this.active}}active{{/if}}" data-entry-id="{{this.id}}">
+    <span>{{this.name}}</span>
+</div>
+{{/inline}}
+
+{{#*inline "weaponMappingPill"}}
+<span class="bam-weapon-mapping-pill"><b style="color:#a5b4fc;">{{this.label}}</b> &rarr; {{this.target}}</span>
+{{/inline}}
+
+{{#*inline "attackPill"}}
+{{#if this.hasConnector}}
+    {{#if this.group.strictOrder}}
+    <span class="bam-then-connector" style="background: rgba(251, 191, 36, 0.2); border: 1px solid #fbbf24; color: #fbbf24; font-weight: 700; font-size: 0.7rem; padding: 1px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 3px;" title="Must be rolled AFTER preceding attacks in this branch"><i class="fas fa-arrow-right"></i> THEN</span>
+    {{else}}
+    <span style="color:#64748b; font-weight:700;">+</span>
+    {{/if}}
+{{/if}}
+<div class="bam-attack-pill">
+    <div class="bam-pill-stepper">
+        <button type="button" class="bam-pill-btn bam-pill-dec" data-sec="{{this.secIdx}}" data-flow="{{this.flowIdx}}" data-grp="{{this.grpIdx}}" title="Decrease Count">&minus;</button>
+        <span>{{this.group.count}}&times;</span>
+        <button type="button" class="bam-pill-btn bam-pill-inc" data-sec="{{this.secIdx}}" data-flow="{{this.flowIdx}}" data-grp="{{this.grpIdx}}" title="Increase Count">+</button>
+    </div>
+    <select class="bam-pill-select" data-sec="{{this.secIdx}}" data-flow="{{this.flowIdx}}" data-grp="{{this.grpIdx}}">
+        {{#each this.options}}
+        <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>
+        {{/each}}
+        <option value="__CUSTOM__" {{#unless this.isStandard}}selected{{/unless}}>Custom Weapon / Pool...</option>
+    </select>
+    {{#unless this.isStandard}}
+    <input type="text" class="bam-pill-custom-input" data-sec="{{this.secIdx}}" data-flow="{{this.flowIdx}}" data-grp="{{this.grpIdx}}" value="{{this.group.token}}" placeholder="Item:Activity:Uses (e.g. Flail:Activity1:1)" style="width: 170px; padding: 1px 5px; background: #11141d; border: 1px solid #6366f1; color: #fff; border-radius: 3px; font-size: 0.78rem;" />
+    {{/unless}}
+    <button type="button" class="bam-pill-btn bam-pill-order" data-sec="{{this.secIdx}}" data-flow="{{this.flowIdx}}" data-grp="{{this.grpIdx}}" title="Toggle Strict Order ('THEN') vs Any Order ('+')" style="color: {{#if this.group.strictOrder}}#fbbf24{{else}}#94a3b8{{/if}};">
+        <i class="fas {{#if this.group.strictOrder}}fa-lock{{else}}fa-random{{/if}}"></i>
+    </button>
+    <button type="button" class="bam-pill-btn bam-pill-del" data-sec="{{this.secIdx}}" data-flow="{{this.flowIdx}}" data-grp="{{this.grpIdx}}" title="Remove Attack" style="color: #f87171;">
+        &times;
+    </button>
+</div>
+{{/inline}}
+
+{{#*inline "branchRow"}}
+{{#if this.isAlternative}}
+<div class="bam-or-divider">&mdash; OR (Alternative Combo) &mdash;</div>
+{{/if}}
+<div class="bam-branch-row">
+    {{#each this.pills}}
+    {{> attackPill}}
+    {{/each}}
+    <button type="button" class="bam-option-btn bam-add-pill-btn" data-sec="{{this.secIdx}}" data-flow="{{this.flowIdx}}" title="Add simultaneous/unordered attack to this branch (+)" style="width: auto; padding: 3px 8px; font-size: 0.75rem;">
+        <i class="fas fa-plus"></i> Attack
+    </button>
+    <button type="button" class="bam-option-btn bam-add-then-pill-btn" data-sec="{{this.secIdx}}" data-flow="{{this.flowIdx}}" title="Add sequential 'THEN' attack inside this branch (rolled after previous attacks in this branch)" style="width: auto; padding: 3px 8px; font-size: 0.75rem; border-color: #fbbf24; color: #fde68a;">
+        <i class="fas fa-arrow-right"></i> + Then
+    </button>
+    {{#if this.canDeleteBranch}}
+    <button type="button" class="bam-pill-btn bam-del-branch-btn" data-sec="{{this.secIdx}}" data-flow="{{this.flowIdx}}" title="Remove this OR branch" style="margin-left: auto; color: #f87171;">
+        <i class="fas fa-trash-alt"></i>
+    </button>
+    {{/if}}
+</div>
+{{/inline}}
+
+{{#*inline "stepCard"}}
+<div class="bam-step-card">
+    <div class="bam-step-header">
+        <div class="bam-step-badge">
+            <i class="fas fa-layer-group"></i>
+            <span>{{this.stepTitle}}</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <label style="font-size: 0.76rem; color: #cbd5e1; display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                <input type="checkbox" class="bam-step-optional-cb" data-sec="{{this.secIdx}}" {{#if this.hasOptionalExit}}checked{{/if}} />
+                Optional / Can Finish Early
+            </label>
+            {{#if this.canDeleteStep}}
+            <button type="button" class="bam-pill-btn bam-del-step-btn" data-sec="{{this.secIdx}}" title="Delete Step" style="color: #f87171;">
+                <i class="fas fa-trash"></i> Remove Step
+            </button>
+            {{/if}}
+        </div>
+    </div>
+    {{#each this.branches}}
+    {{> branchRow}}
+    {{/each}}
+    <div>
+        <button type="button" class="bam-option-btn bam-add-branch-btn" data-sec="{{this.secIdx}}" style="width: auto; padding: 4px 10px; font-size: 0.76rem;">
+            <i class="fas fa-code-branch"></i> + Add "OR" Alternative Branch
+        </button>
+    </div>
+</div>
+{{/inline}}
+
 <div class="bam-autorec-topbar">
     <input type="text" class="bam-search-input" id="bam-search-input" placeholder="{{searchPlaceholder}}" value="{{searchFilter}}" />
     <button type="button" id="bam-add-template-btn" class="bam-option-btn" title="Click or Drag & Drop an Actor here to create a new template" style="width: auto; padding: 5px 12px;">
@@ -9,9 +103,218 @@
 </div>
 <div class="bam-autorec-body">
     <div class="bam-autorec-sidebar">
-        {{{sidebarItemsHtml}}}
+        {{#if sidebarSections.length}}
+            {{#each sidebarSections}}
+            <div class="bam-sidebar-section" {{#unless @first}}style="margin-top: 6px;"{{/unless}}>
+                <div class="bam-sidebar-section-header" style="padding: 8px 10px 6px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #fbbf24; background: rgba(30, 36, 54, 0.85); {{#unless @first}}border-top: 1px solid #334155;{{/unless}} border-bottom: 1px solid #334155; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 1;">
+                    <span><i class="{{this.icon}}" style="margin-right: 6px;"></i> {{this.title}}</span>
+                    <span style="background: #78350f; color: #fde68a; padding: 1px 6px; border-radius: 10px; font-size: 0.68rem;">{{this.count}}</span>
+                </div>
+                {{#each this.entries}}
+                {{> sidebarItem}}
+                {{/each}}
+            </div>
+            {{/each}}
+        {{else}}
+            <div style="padding: 16px 12px; font-size: 0.8rem; color: #64748b; font-style: italic; text-align: center;">No entries found.</div>
+        {{/if}}
     </div>
     <div class="bam-autorec-inspector">
-        {{{inspectorHtml}}}
+        {{#unless hasSelected}}
+            <div style="color: #94a3b8;">No entries found. Click "+ Add Template" to create one.</div>
+        {{else}}
+            {{#if isUnfilled}}
+                <div style="display: flex; flex-direction: column; gap: 18px; padding: 12px 4px;">
+                    <div style="font-size: 0.92rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-plus-circle" style="color: #818cf8;"></i> New Multiattack Template Setup
+                    </div>
+                    <div class="bam-actor-dropzone" id="bam-actor-dropzone" style="padding: 24px 18px; flex-direction: column; text-align: center; gap: 10px;">
+                        <i class="fas fa-dragon" style="font-size: 2.2rem; color: #818cf8;"></i>
+                        <div style="font-weight: 700; color: #e2e8f0; font-size: 0.95rem;">
+                            Option 1: Drag &amp; Drop a Monster Actor Here
+                        </div>
+                        <div style="font-size: 0.8rem; color: #94a3b8; max-width: 440px;">
+                            Drag any Actor from the Sidebar or Compendium into this box. We will automatically read its Multiattack feature, resolve 2024 enrichers, and configure the attack sequence for you.
+                        </div>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 12px; color: #64748b; font-size: 0.78rem; font-weight: 700; text-transform: uppercase;">
+                        <div style="flex: 1; height: 1px; background: rgba(99, 102, 241, 0.25);"></div>
+                        <span>OR</span>
+                        <div style="flex: 1; height: 1px; background: rgba(99, 102, 241, 0.25);"></div>
+                    </div>
+
+                    <div style="background: rgba(15, 19, 30, 0.65); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 8px; padding: 16px; display: flex; align-items: center; justify-content: space-between; gap: 14px;">
+                        <div>
+                            <div style="font-weight: 700; color: #e2e8f0; font-size: 0.88rem;">
+                                Option 2: Fill Manually
+                            </div>
+                            <div style="font-size: 0.76rem; color: #94a3b8;">
+                                Start with a blank template and configure the pattern and visual attack steps yourself.
+                            </div>
+                        </div>
+                        <button type="button" id="bam-start-manual-btn" class="bam-chat-card-btn" style="width: auto; padding: 8px 16px; white-space: nowrap;">
+                            <i class="fas fa-sliders"></i> Fill Manually
+                        </button>
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; margin-top: 8px;">
+                        <button type="button" id="bam-delete-btn" class="bam-option-btn bam-option-finish" style="width: auto; padding: 6px 14px;">
+                            <i class="fas fa-trash"></i> Discard New Template
+                        </button>
+                    </div>
+                </div>
+            {{else}}
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    {{#if llmReviewBanner}}
+                    <div class="bam-llm-review-banner" style="background: rgba(99, 102, 241, 0.12); border: 1px solid #818cf8; border-radius: 8px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <div style="font-weight: 700; color: #e0e7ff; font-size: 0.9rem; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-robot" style="color: #818cf8;"></i>
+                                <span>LLM Generated Entry — Pending Approval</span>
+                            </div>
+                            <span style="background: rgba(251, 191, 36, 0.2); border: 1px solid #fbbf24; color: #fde68a; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 10px;">
+                                NEEDS REVIEW
+                            </span>
+                        </div>
+                        {{#if llmReviewBanner.rawDescription}}
+                        <div style="font-size: 0.78rem; color: #cbd5e1; font-style: italic; background: rgba(15, 19, 30, 0.5); padding: 6px 8px; border-radius: 4px; border-left: 3px solid #818cf8;">
+                            <b>{{llmReviewBanner.actorName}} ({{llmReviewBanner.itemName}}):</b> "{{llmReviewBanner.rawDescription}}"
+                        </div>
+                        {{/if}}
+                        {{#if llmReviewBanner.weaponMappings.length}}
+                        <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
+                            <span style="font-size: 0.74rem; color: #94a3b8;">Detected Weapons:</span>
+                            {{#each llmReviewBanner.weaponMappings}}
+                            {{> weaponMappingPill}}
+                            {{/each}}
+                        </div>
+                        {{/if}}
+                        <div style="font-size: 0.78rem; color: #94a3b8;">
+                            Review or refine the sequence below, then approve it to move it into either <b>Templates</b> (reusable for any monster with this sentence structure) or <b>Monster Overrides</b> (specific to {{llmReviewBanner.overrideKey}}):
+                        </div>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button type="button" id="bam-approve-template-btn" class="bam-chat-card-btn" style="flex: 1; background: #4f46e5; border-color: #6366f1;">
+                                <i class="fas fa-scroll"></i> Approve as Generic Template
+                            </button>
+                            <button type="button" id="bam-approve-override-btn" class="bam-chat-card-btn" style="flex: 1; background: #0f766e; border-color: #14b8a6;">
+                                <i class="fas fa-dragon"></i> Approve as Monster Override
+                            </button>
+                        </div>
+                    </div>
+                    {{/if}}
+
+                    {{#if droppedActorCard}}
+                    <div class="bam-dropped-actor-card" id="bam-actor-dropzone">
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <img src="{{droppedActorCard.actorImg}}" alt="{{droppedActorCard.actorName}}" style="width: 38px; height: 38px; border-radius: 6px; object-fit: cover; border: 1px solid #818cf8;" />
+                                <div>
+                                    <div style="font-weight: 700; color: #fff; font-size: 0.88rem;">
+                                        {{droppedActorCard.actorName}} <span style="font-weight: 400; color: #94a3b8; font-size: 0.76rem;">({{droppedActorCard.itemName}})</span>
+                                    </div>
+                                    <div style="font-size: 0.75rem; color: #cbd5e1; font-style: italic;">
+                                        "{{droppedActorCard.rawDescription}}"
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" id="bam-clear-dropped-btn" class="bam-pill-btn" title="Clear dropped monster and reset to unfilled" style="font-size: 1rem; color: #94a3b8;">&times;</button>
+                        </div>
+                        <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding-top: 4px; border-top: 1px solid rgba(99, 102, 241, 0.25);">
+                            <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
+                                <span style="font-size: 0.74rem; color: #94a3b8;">Detected Weapons:</span>
+                                {{#each droppedActorCard.weaponMappings}}
+                                {{> weaponMappingPill}}
+                                {{/each}}
+                            </div>
+                            <div style="display: flex; gap: 6px;">
+                                <button type="button" id="bam-drop-mode-template" class="bam-option-btn" style="width: auto; padding: 3px 10px; font-size: 0.74rem; {{#if droppedActorCard.isTemplateMode}}border-color: #818cf8; background: rgba(99, 102, 241, 0.35); font-weight: 700;{{/if}}">
+                                    <i class="fas fa-shapes"></i> Reusable Template
+                                </button>
+                                <button type="button" id="bam-drop-mode-override" class="bam-option-btn" style="width: auto; padding: 3px 10px; font-size: 0.74rem; {{#if droppedActorCard.isOverrideMode}}border-color: #818cf8; background: rgba(99, 102, 241, 0.35); font-weight: 700;{{/if}}">
+                                    <i class="fas fa-user-tag"></i> Specific Monster Override
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {{/if}}
+
+                    <!-- Plain English Summary Banner -->
+                    <div class="bam-summary-banner">
+                        <div class="bam-summary-title">
+                            <i class="fas fa-magic"></i> Plain-English Attack Summary
+                        </div>
+                        <div class="bam-summary-body">
+                            {{{summaryHtml}}}
+                        </div>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <label style="font-size: 0.78rem; color: #94a3b8;">Entry Name</label>
+                            <input type="text" id="bam-edit-name" value="{{displayName}}" style="width: 100%; padding: 6px 8px; background: #1e2436; border: 1px solid #4f46e5; color: #fff; border-radius: 4px;" />
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <label style="font-size: 0.78rem; color: #94a3b8;">Pattern / Key (Abstracted sentence or Actor::Item override)</label>
+                                <button type="button" id="bam-parse-pattern-btn" class="bam-option-btn" title="Parse the sentence in Pattern / Key into the Visual Attack Sequence Builder below" style="width: auto; padding: 2px 8px; font-size: 0.72rem; border-color: #6366f1; color: #a5b4fc;">
+                                    <i class="fas fa-wand-magic-sparkles"></i> Auto-Build from Pattern Text
+                                </button>
+                            </div>
+                            <input type="text" id="bam-edit-pattern" value="{{displayPattern}}" style="width: 100%; padding: 6px 8px; background: #1e2436; border: 1px solid #4f46e5; color: #fff; border-radius: 4px; font-family: monospace;" />
+                        </div>
+                    </div>
+
+                    <!-- Visual Multiattack Flow Builder -->
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <label style="font-size: 0.8rem; font-weight: 600; color: #cbd5e1;">
+                                Visual Attack Sequence Builder
+                            </label>
+                            <button type="button" id="bam-add-step-btn" class="bam-option-btn" style="width: auto; padding: 3px 10px; font-size: 0.76rem;">
+                                <i class="fas fa-plus"></i> + Add "Then" Step
+                            </button>
+                        </div>
+                        {{#each stepCards}}
+                        {{> stepCard}}
+                        {{/each}}
+                    </div>
+
+                    {{#if enableLlmFallback}}
+                    <div class="bam-llm-repair-box" style="background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.35); border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; margin-top: 4px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <span style="font-size: 0.78rem; font-weight: 700; color: #a5b4fc; display: flex; align-items: center; gap: 6px;">
+                                <i class="fas fa-robot"></i> Fix / Refine Sequence with LLM Agent
+                            </span>
+                            <span style="font-size: 0.7rem; color: #94a3b8;">Sends schema rules, current JSON, pattern &amp; your feedback</span>
+                        </div>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <input type="text" id="bam-llm-feedback-input" placeholder="Describe what's wrong (e.g. 'Longbow should only roll AFTER the 3 sword attacks, or roll 2 slings instead')" style="flex: 1; padding: 6px 8px; background: #11141d; border: 1px solid #4f46e5; color: #fff; border-radius: 4px; font-size: 0.78rem;" />
+                            <button type="button" id="bam-llm-repair-btn" class="bam-option-btn" style="width: auto; padding: 6px 12px; font-size: 0.76rem; background: rgba(99, 102, 241, 0.25); border-color: #818cf8; color: #fff; white-space: nowrap;">
+                                <i class="fas fa-wand-magic-sparkles"></i> Ask LLM to Fix
+                            </button>
+                        </div>
+                    </div>
+                    {{/if}}
+
+                    <!-- Collapsible Raw JSON for power users -->
+                    <details style="margin-top: 4px;">
+                        <summary style="cursor: pointer; font-size: 0.76rem; color: #64748b;">
+                            Advanced: Raw 3D JSON Data
+                        </summary>
+                        <textarea id="bam-edit-sequence" rows="4" style="width: 100%; margin-top: 6px; padding: 6px; background: #11141d; border: 1px solid #334155; color: #94a3b8; border-radius: 4px; font-family: monospace; font-size: 0.78rem;">{{rawSequenceJson}}</textarea>
+                    </details>
+
+                    <div style="display: flex; gap: 10px; margin-top: 6px;">
+                        <button type="button" id="bam-save-btn" class="bam-chat-card-btn" style="flex: 1;">
+                            <i class="fas fa-save"></i> {{saveBtnLabel}}
+                        </button>
+                        <button type="button" id="bam-delete-btn" class="bam-option-btn bam-option-finish" style="width: auto; padding: 6px 14px;">
+                            <i class="fas fa-trash"></i> {{deleteBtnLabel}}
+                        </button>
+                    </div>
+                </div>
+            {{/if}}
+        {{/unless}}
     </div>
 </div>
